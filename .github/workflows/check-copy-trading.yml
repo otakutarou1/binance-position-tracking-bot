@@ -1,0 +1,28 @@
+name: Check KOL public data
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - probe_copy_trading.py
+      - tracked_portfolios.json
+      - .github/workflows/check-copy-trading.yml
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check configured public portfolios
+        run: python probe_copy_trading.py
+      - name: Save diagnostics even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-endpoint-diagnostics
+          path: diagnostics/
+          retention-days: 3
