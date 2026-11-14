@@ -38,7 +38,15 @@ def main():
         detail = result["detail"].get("payload", {}).get("data")
         name = detail.get("nickname") if isinstance(detail, dict) else None
         result["identity_verified"] = name == target["name"]
-        result["ready_for_schema_review"] = result["identity_verified"] and result["positions"]["ok"]
+        result["positions_visible"] = isinstance(detail, dict) and detail.get("positionShow") is True
+        result["ready_for_schema_review"] = result["identity_verified"] and result["positions"]["ok"] and result["positions_visible"]
+        result["status"] = "SCHEMA_REVIEW_REQUIRED" if result["ready_for_schema_review"] else "BLOCKED_OR_HIDDEN"
+        print("Public position visibility:", result["positions_visible"], "Status:", result["status"])
+        summary = __import__("os").environ.get("GITHUB_STEP_SUMMARY")
+        if summary:
+            with open(summary, "a", encoding="utf-8") as stream:
+                stream.write("## Public position check\n\nStatus: " + result["status"] + "\n\nAn empty or hidden response is never a close-position signal.\n")
+
         passed = passed and result["ready_for_schema_review"]
         (output / (pid + ".json")).write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
         print(json.dumps({"portfolio_id": pid, "detail_ok": result["detail"]["ok"],
